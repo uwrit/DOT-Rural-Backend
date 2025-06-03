@@ -83,4 +83,4 @@ jobs:
       environment: ${{ needs.determineenvironment.outputs.environment }}
       arguments: '--project ${{ needs.vars.outputs.FIREBASE_PROJECT_ID }}'
     secrets:
-      GOOGLE_APPLICATION_CREDENTIALS_BASE64: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_BASE64 }}
+      GOOGLE_APPLICATION_CREDENTIALS_BASE64: ${{ secrets.SERVICE_ACCOUNT_BASE64 }}
