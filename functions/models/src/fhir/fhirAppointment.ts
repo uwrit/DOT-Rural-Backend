@@ -6,32 +6,32 @@
 // SPDX-License-Identifier: MIT
 //
 
-import { z } from 'zod'
-import { fhirCodeableConceptConverter } from './baseTypes/fhirCodeableConcept.js'
+import { z } from "zod";
+import { fhirCodeableConceptConverter } from "./baseTypes/fhirCodeableConcept.js";
 import {
   FHIRResource,
   fhirResourceConverter,
   type FHIRResourceInput,
-} from './baseTypes/fhirElement.js'
-import { fhirReferenceConverter } from './baseTypes/fhirReference.js'
-import { FHIRExtensionUrl } from '../codes/codes.js'
-import { compactMap } from '../helpers/array.js'
-import { dateConverter } from '../helpers/dateConverter.js'
-import { Lazy } from '../helpers/lazy.js'
-import { optionalish } from '../helpers/optionalish.js'
-import { SchemaConverter } from '../helpers/schemaConverter.js'
+} from "./baseTypes/fhirElement.js";
+import { fhirReferenceConverter } from "./baseTypes/fhirReference.js";
+import { FHIRExtensionUrl } from "../codes/codes.js";
+import { compactMap } from "../helpers/array.js";
+import { dateTimeConverter } from "../helpers/dateConverter.js";
+import { Lazy } from "../helpers/lazy.js";
+import { optionalish } from "../helpers/optionalish.js";
+import { SchemaConverter } from "../helpers/schemaConverter.js";
 
 export enum FHIRAppointmentStatus {
-  proposed = 'proposed',
-  pending = 'pending',
-  booked = 'booked',
-  arrived = 'arrived',
-  fulfilled = 'fulfilled',
-  cancelled = 'cancelled',
-  noshow = 'noshow',
-  enterdInError = 'entered-in-error',
-  checkedIn = 'checked-in',
-  waitlist = 'waitlist',
+  proposed = "proposed",
+  pending = "pending",
+  booked = "booked",
+  arrived = "arrived",
+  fulfilled = "fulfilled",
+  cancelled = "cancelled",
+  noshow = "noshow",
+  enterdInError = "entered-in-error",
+  checkedIn = "checked-in",
+  waitlist = "waitlist",
 }
 
 export const fhirAppointmentParticipantConverter = new Lazy(
@@ -54,11 +54,11 @@ export const fhirAppointmentParticipantConverter = new Lazy(
           : null,
       }),
     }),
-)
+);
 
 export type FHIRAppointmentParticipant = z.output<
   typeof fhirAppointmentParticipantConverter.value.schema
->
+>;
 
 export const fhirAppointmentConverter = new Lazy(
   () =>
@@ -66,9 +66,9 @@ export const fhirAppointmentConverter = new Lazy(
       schema: fhirResourceConverter.value.schema
         .extend({
           status: z.nativeEnum(FHIRAppointmentStatus),
-          created: dateConverter.schema,
-          start: dateConverter.schema,
-          end: dateConverter.schema,
+          created: dateTimeConverter.schema,
+          start: dateTimeConverter.schema,
+          end: dateTimeConverter.schema,
           comment: optionalish(z.string()),
           patientInstruction: optionalish(z.string()),
           participant: optionalish(
@@ -81,9 +81,9 @@ export const fhirAppointmentConverter = new Lazy(
       encode: (object) => ({
         ...fhirResourceConverter.value.encode(object),
         status: object.status,
-        created: dateConverter.encode(object.created),
-        start: dateConverter.encode(object.start),
-        end: dateConverter.encode(object.end),
+        created: dateTimeConverter.encode(object.created),
+        start: dateTimeConverter.encode(object.start),
+        end: dateTimeConverter.encode(object.end),
         comment: object.comment ?? null,
         patientInstruction: object.patientInstruction ?? null,
         participant:
@@ -92,17 +92,17 @@ export const fhirAppointmentConverter = new Lazy(
           ) ?? null,
       }),
     }),
-)
+);
 
 export class FHIRAppointment extends FHIRResource {
   // Static Functions
 
   static create(input: {
-    userId: string
-    created: Date
-    status: FHIRAppointmentStatus
-    start: Date
-    durationInMinutes: number
+    userId: string;
+    created: Date;
+    status: FHIRAppointmentStatus;
+    start: Date;
+    durationInMinutes: number;
   }): FHIRAppointment {
     return new FHIRAppointment({
       status: input.status,
@@ -118,19 +118,19 @@ export class FHIRAppointment extends FHIRResource {
           },
         },
       ],
-    })
+    });
   }
 
   // Stored Properties
 
-  readonly resourceType: string = 'Appointment'
-  readonly status: FHIRAppointmentStatus
-  readonly created: Date
-  readonly start: Date
-  readonly end: Date
-  readonly comment?: string
-  readonly patientInstruction?: string
-  readonly participant?: FHIRAppointmentParticipant[]
+  readonly resourceType: string = "Appointment";
+  readonly status: FHIRAppointmentStatus;
+  readonly created: Date;
+  readonly start: Date;
+  readonly end: Date;
+  readonly comment?: string;
+  readonly patientInstruction?: string;
+  readonly participant?: FHIRAppointmentParticipant[];
 
   // Computed Properties
 
@@ -138,29 +138,29 @@ export class FHIRAppointment extends FHIRResource {
     return compactMap(
       this.extensionsWithUrl(FHIRExtensionUrl.providerName),
       (extension) => extension.valueString,
-    )
+    );
   }
 
   // Constructor
 
   constructor(
     input: FHIRResourceInput & {
-      status: FHIRAppointmentStatus
-      created: Date
-      start: Date
-      end: Date
-      comment?: string
-      patientInstruction?: string
-      participant?: FHIRAppointmentParticipant[]
+      status: FHIRAppointmentStatus;
+      created: Date;
+      start: Date;
+      end: Date;
+      comment?: string;
+      patientInstruction?: string;
+      participant?: FHIRAppointmentParticipant[];
     },
   ) {
-    super(input)
-    this.status = input.status
-    this.created = input.created
-    this.start = input.start
-    this.end = input.end
-    this.comment = input.comment
-    this.patientInstruction = input.patientInstruction
-    this.participant = input.participant
+    super(input);
+    this.status = input.status;
+    this.created = input.created;
+    this.start = input.start;
+    this.end = input.end;
+    this.comment = input.comment;
+    this.patientInstruction = input.patientInstruction;
+    this.participant = input.participant;
   }
 }

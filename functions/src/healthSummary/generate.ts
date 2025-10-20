@@ -12,18 +12,20 @@ import {
   presortedPercentile,
   type Observation,
   UserMedicationRecommendationType,
-} from '@stanfordbdhg/engagehf-models'
-import { logger } from 'firebase-functions'
+} from "@stanfordbdhg/engagehf-models";
+import { logger } from "firebase-functions";
 import 'jspdf-autotable' /* eslint-disable-line */
 import { type CellDef } from 'jspdf-autotable' /* eslint-disable-line */
-import { healthSummaryLocalizations } from './generate+localizations.js'
-import { generateChartSvg } from './generateChart.js'
-import { generateSpeedometerSvg } from './generateSpeedometer.js'
-import { PdfGenerator } from './pdfGenerator.js'
-import { type HealthSummaryData } from '../models/healthSummaryData.js'
+import { healthSummaryLocalization } from "./generate+localizations.js";
+import { generateChartSvg } from "./generateChart.js";
+import { generateSpeedometerSvg } from "./generateSpeedometer.js";
+import { healthSummaryKeyPointTexts } from "./keyPointsMessage.js";
+import { PdfGenerator } from "./pdfGenerator.js";
+import { type HealthSummaryData } from "../models/healthSummaryData.js";
+import { Localizer } from "../services/localization/localizer.js";
 
 export interface HealthSummaryOptions {
-  languages: string[]
+  languages: string[];
 }
 
 export function generateHealthSummary(
@@ -32,109 +34,135 @@ export function generateHealthSummary(
 ): Buffer {
   logger.debug(
     `generateHealthSummary: ${data.vitals.bodyWeight.length} body weight observations.`,
-  )
+  );
   logger.debug(
     `generateHealthSummary: ${data.vitals.heartRate.length} heart rate observations.`,
-  )
+  );
   logger.debug(
     `generateHealthSummary: ${data.vitals.systolicBloodPressure.length} systolic blood pressure observations.`,
-  )
+  );
   logger.debug(
     `generateHealthSummary: ${data.vitals.diastolicBloodPressure.length} diastolic blood pressure observations.`,
-  )
+  );
   logger.debug(
     `generateHealthSummary: ${data.vitals.dryWeight !== undefined ? 1 : 0} dry weight observations.`,
-  )
+  );
   logger.debug(
     `generateHealthSummary: ${data.recommendations.length} recommendations.`,
-  )
+  );
   logger.debug(
     `generateHealthSummary: ${data.symptomScores.length} symptom scores.`,
-  )
-  const generator = new HealthSummaryPdfGenerator(data, options)
+  );
+  const generator = new HealthSummaryPdfGenerator(data, options);
 
-  generator.addPageHeader()
-  generator.addKeyPointsSection()
-  generator.addCurrentMedicationSection()
-  generator.addMedicationRecommendationsSection()
-  generator.addSymptomScoresSummarySection()
+  generator.addPageHeader();
+  generator.addKeyPointsSection();
+  generator.addCurrentMedicationSection();
+  generator.addMedicationRecommendationsSection();
+  generator.addSymptomScoresSummarySection();
 
-  generator.newPage()
-  generator.addSymptomScoresTableSection()
-  generator.addVitalsSection()
+  generator.newPage();
+  generator.addSymptomScoresTableSection();
+  generator.addVitalsSection();
 
-  return generator.finish()
+  return generator.finish();
 }
 
 class HealthSummaryPdfGenerator extends PdfGenerator {
   // Properties
 
-  data: HealthSummaryData
-  options: HealthSummaryOptions
+  data: HealthSummaryData;
+  options: HealthSummaryOptions;
 
-  texts: ReturnType<typeof healthSummaryLocalizations>
+  localizer: Localizer<typeof healthSummaryLocalization>;
 
   // Constructor
 
   constructor(data: HealthSummaryData, options: HealthSummaryOptions) {
-    super()
-    this.data = data
-    this.options = options
-    this.texts = healthSummaryLocalizations(options.languages)
+    super();
+    this.data = data;
+    this.options = options;
+    this.localizer = new Localizer(
+      healthSummaryLocalization,
+      options.languages,
+    );
   }
 
   // Methods
 
   addPageHeader() {
-    this.addText(this.texts.header.title, this.textStyles.h2)
-    this.addText(this.data.name ?? '---', this.textStyles.h1)
+    this.addText(this.localizer.text("headerTitle"), this.textStyles.h2);
+    this.addText(this.data.name ?? "---", this.textStyles.h1);
     this.addText(
-      this.texts.header.dateOfBirthLine(this.data.dateOfBirth ?? null),
-    )
-    this.addText(this.texts.header.providerLine(this.data.providerName ?? null))
+      this.localizer.text(
+        "headerDateOfBirth",
+        this.data.dateOfBirth !== undefined ?
+          this.formatDate(this.data.dateOfBirth)
+        : "---",
+      ),
+    );
     this.addText(
-      this.texts.header.nextAppointmentLine(this.data.nextAppointment ?? null),
-    )
+      this.localizer.text("headerProvider", this.data.providerName ?? "---"),
+    );
+    const appointment = this.data.nextAppointment;
+    const date = appointment?.start;
+    const providerNames = appointment?.providerNames ?? [];
+    const providerText =
+      providerNames.length === 0 ? "" : providerNames.join(", ") + " ";
+    this.addText(
+      date !== undefined ?
+        this.localizer.text(
+          "headerNextAppointment",
+          providerText + this.formatDate(date),
+          this.formatTime(date),
+        )
+      : this.localizer.text("headerNextAppointmentNone"),
+    );
 
-    const innerWidth = this.pageWidth - this.margins.left - this.margins.right
-    const pageNumberText = this.texts.header.pageNumberTitle(
-      this.doc.getNumberOfPages(),
-    )
-    const pageNumberWidth = this.doc.getTextWidth(pageNumberText)
-    this.cursor.x = this.margins.left + innerWidth - pageNumberWidth
-    this.cursor.y -= this.textStyles.body.fontSize
-    this.addText(pageNumberText, this.textStyles.body, pageNumberWidth)
-    this.cursor.x = this.margins.left
+    const innerWidth = this.pageWidth - this.margins.left - this.margins.right;
+    const pageNumberText = this.localizer.text(
+      "headerPageNumber",
+      this.doc.getNumberOfPages().toFixed(0),
+    );
+    const pageNumberWidth = this.doc.getTextWidth(pageNumberText);
+    this.cursor.x = this.margins.left + innerWidth - pageNumberWidth;
+    this.cursor.y -= this.textStyles.body.fontSize;
+    this.addText(pageNumberText, this.textStyles.body, pageNumberWidth);
+    this.cursor.x = this.margins.left;
 
     this.addLine(
       { x: this.cursor.x, y: this.cursor.y },
       { x: this.cursor.x + innerWidth, y: this.cursor.y },
       this.colors.black,
       1,
-    )
-    this.moveDown(this.textStyles.body.fontSize / 2)
+    );
+    this.moveDown(this.textStyles.body.fontSize / 2);
   }
 
   addKeyPointsSection() {
-    this.addSectionTitle(this.texts.keyPointsSection.title)
+    this.addSectionTitle(this.localizer.text("keyPointsTitle"));
 
-    const texts = this.texts.keyPointsSection.text({
-      recommendations: this.data.recommendationsCategory,
-      symptomScore: this.data.symptomScoreCategory,
-      dizziness: this.data.dizzinessCategory,
-      weight: this.data.weightCategory,
-    })
+    const recommendationsCategory = this.data.recommendationsCategory;
+    const texts =
+      recommendationsCategory !== null ?
+        (healthSummaryKeyPointTexts({
+          recommendations: recommendationsCategory,
+          symptomScore: this.data.symptomScoreCategory,
+          dizziness: this.data.dizzinessCategory,
+          weight: this.data.weightCategory,
+        })?.map((key) => key.localize(...this.options.languages)) ?? null)
+      : null;
     if (texts !== null) {
       if (texts.length === 1) {
-        this.addText(texts[0], this.textStyles.bodyColored)
+        this.addText(texts[0], this.textStyles.bodyColored);
       } else {
-        this.addList(texts, this.textStyles.bodyColored)
+        this.addList(texts, this.textStyles.bodyColored);
       }
     } else {
       this.addText(
-        this.texts.keyPointsSection.defaultText,
+        this.localizer.text("keyPointsDefault"),
         this.textStyles.bodyItalic,
-      )
+      );
     }
   }
 
@@ -143,23 +171,23 @@ class HealthSummaryPdfGenerator extends PdfGenerator {
       (recommendation) =>
         recommendation.displayInformation.dosageInformation.currentSchedule
           .length > 0,
-    )
-    if (currentMedication.length === 0) return
-    this.addSectionTitle(this.texts.currentMedicationsSection.title)
+    );
+    if (currentMedication.length === 0) return;
+    this.addSectionTitle(this.localizer.text("currentMedicationsTitle"));
     this.addText(
-      this.texts.currentMedicationsSection.description,
+      this.localizer.text("currentMedicationsDescription"),
       this.textStyles.bodyItalic,
-    )
+    );
 
     const tableContent: CellDef[][] = [
       [
-        this.texts.currentMedicationsSection.table.nameHeader,
-        this.texts.currentMedicationsSection.table.currentDoseHeader,
-        this.texts.currentMedicationsSection.table.targetDoseHeader,
-      ].map((title) => this.cell(title, { fontStyle: 'bold' })),
+        this.localizer.text("currentMedicationsTableNameHeader"),
+        this.localizer.text("currentMedicationsTableCurrentDoseHeader"),
+        this.localizer.text("currentMedicationsTableTargetDoseHeader"),
+      ].map((title) => this.cell(title, { fontStyle: "bold" })),
       ...currentMedication.map((recommendation) => [
         this.cell(
-          '[ ] ' +
+          "[ ] " +
             recommendation.displayInformation.title.localize(
               ...this.options.languages,
             ),
@@ -167,28 +195,28 @@ class HealthSummaryPdfGenerator extends PdfGenerator {
         this.cell(
           recommendation.displayInformation.dosageInformation.currentSchedule
             .map((schedule) =>
-              this.texts.currentMedicationsSection.table.doseSchedule(
+              this.medicationDoseScheduleText({
                 schedule,
-                recommendation.displayInformation.dosageInformation.unit,
-              ),
+                unit: recommendation.displayInformation.dosageInformation.unit,
+              }),
             )
-            .join('\n'),
+            .join("\n"),
         ),
         this.cell(
           recommendation.displayInformation.dosageInformation.targetSchedule
             .map((schedule) =>
-              this.texts.currentMedicationsSection.table.doseSchedule(
+              this.medicationDoseScheduleText({
                 schedule,
-                recommendation.displayInformation.dosageInformation.unit,
-              ),
+                unit: recommendation.displayInformation.dosageInformation.unit,
+              }),
             )
-            .join('\n'),
+            .join("\n"),
         ),
       ]),
-    ]
+    ];
 
-    this.addTable(tableContent)
-    this.moveDown(this.textStyles.body.fontSize)
+    this.addTable(tableContent);
+    this.moveDown(this.textStyles.body.fontSize);
   }
 
   addMedicationRecommendationsSection() {
@@ -197,118 +225,113 @@ class HealthSummaryPdfGenerator extends PdfGenerator {
         UserMedicationRecommendationType.improvementAvailable,
         UserMedicationRecommendationType.notStarted,
       ].includes(recommendation.displayInformation.type),
-    )
-    if (optimizations.length === 0) return
-    this.addSectionTitle(this.texts.medicationRecommendationsSection.title)
+    );
+    if (optimizations.length === 0) return;
+    this.addSectionTitle(this.localizer.text("medicationRecommendationsTitle"));
 
     this.addList(
       optimizations.map((recommendation) => {
         const title = recommendation.displayInformation.title.localize(
           ...this.options.languages,
-        )
+        );
         const description =
           recommendation.displayInformation.description.localize(
             ...this.options.languages,
-          )
-        return `${title}: ${description}`
+          );
+        return `${title}: ${description}`;
       }),
       this.textStyles.bodyColored,
-    )
+    );
 
-    this.moveDown(this.textStyles.body.fontSize / 2)
+    this.moveDown(this.textStyles.body.fontSize / 2);
     this.addText(
-      this.texts.medicationRecommendationsSection.description,
+      this.localizer.text("medicationRecommendationsDescription"),
       this.textStyles.bodyItalic,
-    )
+    );
     this.addText(
-      this.texts.medicationRecommendationsSection.hint,
+      this.localizer.text("medicationRecommendationsHint"),
       this.textStyles.bodyColoredBoldItalic,
-    )
+    );
   }
 
   addSymptomScoresSummarySection() {
-    if (this.data.symptomScores.length === 0) return
-    this.addSectionTitle(this.texts.symptomScoresSummarySection.title)
+    if (this.data.symptomScores.length === 0) return;
+    this.addSectionTitle(this.localizer.text("symptomScoresSummaryTitle"));
 
     this.splitTwoColumns(
       (columnWidth) => {
-        this.addSpeedometer(columnWidth)
+        this.addSpeedometer(columnWidth);
       },
       (columnWidth) => {
         this.addText(
-          this.texts.symptomScoresSummarySection.description,
+          this.localizer.text("symptomScoresSummaryDescription"),
           this.textStyles.bodyItalic,
           columnWidth,
-        )
-        this.moveDown(this.textStyles.body.fontSize / 2)
+        );
+        this.moveDown(this.textStyles.body.fontSize / 2);
 
-        const personalSummaryText =
-          this.texts.symptomScoresSummarySection.personalSummary({
-            currentScore: this.data.latestSymptomScore,
-            previousScore: this.data.secondLatestSymptomScore,
-          })
-        if (personalSummaryText !== undefined) {
+        const personalSummaryText = this.symptomScorePersonalSummaryText();
+        if (personalSummaryText !== null) {
           this.addText(
             personalSummaryText,
             this.textStyles.bodyColored,
             columnWidth,
-          )
+          );
         }
       },
-    )
+    );
   }
 
   addSymptomScoresTableSection() {
-    if (this.data.symptomScores.length === 0) return
-    this.addSectionTitle(this.texts.symptomScoresTableSection.title)
+    if (this.data.symptomScores.length === 0) return;
+    this.addSectionTitle(this.localizer.text("symptomScoresTableTitle"));
     this.addText(
-      this.texts.symptomScoresTableSection.description,
+      this.localizer.text("symptomScoresTableDescription"),
       this.textStyles.bodyItalic,
-    )
+    );
 
     const tableContent: CellDef[][] = [
       [
-        this.texts.symptomScoresTableSection.dateHeader,
-        this.texts.symptomScoresTableSection.overallScoreHeader,
-        this.texts.symptomScoresTableSection.physicalLimitsScoreHeader,
-        this.texts.symptomScoresTableSection.socialLimitsScoreHeader,
-        this.texts.symptomScoresTableSection.qualityOfLifeScoreHeader,
-        this.texts.symptomScoresTableSection.symptomFrequencyScoreHeader,
-        this.texts.symptomScoresTableSection.dizzinessScoreHeader,
+        "",
+        this.localizer.text("symptomScoresTableOverallScoreHeader"),
+        this.localizer.text("symptomScoresTablePhysicalLimitsScoreHeader"),
+        this.localizer.text("symptomScoresTableSocialLimitsScoreHeader"),
+        this.localizer.text("symptomScoresTableQualityOfLifeScoreHeader"),
+        this.localizer.text("symptomScoresTableSymptomFrequencyScoreHeader"),
+        this.localizer.text("symptomScoresTableDizzinessScoreHeader"),
       ].map((title) => this.cell(title)),
       ...this.data.symptomScores.map((score, index) => [
-        this.cell(this.texts.symptomScoresTableSection.formatDate(score.date), {
-          fontStyle: index === 0 ? 'bold' : 'normal',
+        this.cell(this.formatDate(score.date), {
+          fontStyle: index === 0 ? "bold" : "normal",
         }),
         this.cell(score.overallScore.toFixed(0), {
-          fontStyle: index === 0 ? 'bold' : 'normal',
+          fontStyle: index === 0 ? "bold" : "normal",
         }),
-        this.cell(score.physicalLimitsScore?.toFixed(0) ?? '---', {
-          fontStyle: index === 0 ? 'bold' : 'normal',
+        this.cell(score.physicalLimitsScore?.toFixed(0) ?? "---", {
+          fontStyle: index === 0 ? "bold" : "normal",
         }),
-        this.cell(score.socialLimitsScore?.toFixed(0) ?? '---', {
-          fontStyle: index === 0 ? 'bold' : 'normal',
+        this.cell(score.socialLimitsScore?.toFixed(0) ?? "---", {
+          fontStyle: index === 0 ? "bold" : "normal",
         }),
-        this.cell(score.qualityOfLifeScore?.toFixed(0) ?? '---', {
-          fontStyle: index === 0 ? 'bold' : 'normal',
+        this.cell(score.qualityOfLifeScore?.toFixed(0) ?? "---", {
+          fontStyle: index === 0 ? "bold" : "normal",
         }),
-        this.cell(score.symptomFrequencyScore?.toFixed(0) ?? '---', {
-          fontStyle: index === 0 ? 'bold' : 'normal',
+        this.cell(score.symptomFrequencyScore?.toFixed(0) ?? "---", {
+          fontStyle: index === 0 ? "bold" : "normal",
         }),
         this.cell(score.dizzinessScore.toFixed(0), {
-          fontStyle: index === 0 ? 'bold' : 'normal',
+          fontStyle: index === 0 ? "bold" : "normal",
         }),
       ]),
-    ]
-    this.addTable(tableContent)
-    this.moveDown(this.textStyles.body.fontSize)
+    ];
+    this.addTable(tableContent);
+    this.moveDown(this.textStyles.body.fontSize);
   }
 
   addVitalsSection() {
-    this.addSectionTitle(this.texts.vitalsSection.title)
-
-    this.addWeightAndHeartRateVitalsPart()
-    this.addBloodPressureVitalsPart()
+    this.addSectionTitle(this.localizer.text("vitalsTitle"));
+    this.addWeightAndHeartRateVitalsPart();
+    this.addBloodPressureVitalsPart();
   }
 
   private addWeightAndHeartRateVitalsPart() {
@@ -316,180 +339,270 @@ class HealthSummaryPdfGenerator extends PdfGenerator {
       this.data.vitals.bodyWeight.length === 0 &&
       this.data.vitals.heartRate.length === 0
     )
-      return
+      return;
     this.splitTwoColumns(
       (columnWidth) => {
-        if (this.data.vitals.bodyWeight.length === 0) return
+        if (this.data.vitals.bodyWeight.length === 0) return;
         this.addText(
-          this.texts.vitalsSection.bodyWeightTitle,
+          this.localizer.text("vitalsBodyWeightTitle"),
           this.textStyles.bodyBold,
           columnWidth,
-        )
+        );
         this.addChart(
           this.data.vitals.bodyWeight,
           columnWidth,
           this.data.vitals.dryWeight?.value,
-        )
-        const bodyWeightRange = this.data.bodyWeightRange
+        );
+        const bodyWeightRange = this.data.bodyWeightRange;
         this.addTable(
           [
             [
-              this.texts.vitalsSection.bodyWeightTable.titleHeader,
-              this.texts.vitalsSection.bodyWeightTable.currentHeader,
-              this.texts.vitalsSection.bodyWeightTable.sevenDayMedianHeader,
-              this.texts.vitalsSection.bodyWeightTable.rangeHeader,
+              "",
+              this.localizer.text("vitalsBodyWeightTableCurrentHeader"),
+              this.localizer.text("vitalsBodyWeightTableSevenDayMedianHeader"),
+              this.localizer.text("vitalsBodyWeightTableRangeHeader"),
             ].map((title) => this.cell(title)),
             [
-              this.texts.vitalsSection.bodyWeightTable.rowTitle,
-              this.data.latestBodyWeight?.toFixed(0) ?? '---',
-              this.data.lastSevenDayMedianBodyWeight?.toFixed(0) ?? '---',
+              this.localizer.text("vitalsBodyWeightTableRowTitle"),
+              this.data.latestBodyWeight?.toFixed(0) ?? "---",
+              this.data.lastSevenDayMedianBodyWeight?.toFixed(0) ?? "---",
               bodyWeightRange !== null ?
                 `${bodyWeightRange[0].toFixed(0)}-${bodyWeightRange[1].toFixed(0)}`
-              : '---',
+              : "---",
             ].map((title) => this.cell(title)),
           ],
           columnWidth,
-        )
+        );
       },
       (columnWidth) => {
-        if (this.data.vitals.heartRate.length === 0) return
+        if (this.data.vitals.heartRate.length === 0) return;
         this.addText(
-          this.texts.vitalsSection.heartRateTitle,
+          this.localizer.text("vitalsHeartRateTitle"),
           this.textStyles.bodyBold,
           columnWidth,
-        )
-        this.addChart(this.data.vitals.heartRate, columnWidth)
+        );
+        this.addChart(this.data.vitals.heartRate, columnWidth);
         const values = [
           ...this.data.vitals.heartRate.map((observation) => observation.value),
-        ].sort((a, b) => a - b)
-        const upperMedian = presortedPercentile(values, 0.75)
-        const lowerMedian = presortedPercentile(values, 0.25)
+        ].sort((a, b) => a - b);
+        const upperMedian = presortedPercentile(values, 0.75);
+        const lowerMedian = presortedPercentile(values, 0.25);
         this.addTable(
           [
             [
-              this.texts.vitalsSection.heartRateTable.titleHeader,
-              this.texts.vitalsSection.heartRateTable.medianHeader,
-              this.texts.vitalsSection.heartRateTable.iqrHeader,
-              this.texts.vitalsSection.heartRateTable.percentageUnder50Header,
-              this.texts.vitalsSection.heartRateTable.percentageOver120Header,
+              "",
+              this.localizer.text("vitalsHeartRateTableMedianHeader"),
+              this.localizer.text("vitalsHeartRateTableIqrHeader"),
+              this.localizer.text(
+                "vitalsHeartRateTablePercentageUnder50Header",
+              ),
+              this.localizer.text(
+                "vitalsHeartRateTablePercentageOver120Header",
+              ),
             ].map((title) => this.cell(title)),
             [
-              this.texts.vitalsSection.heartRateTable.rowTitle,
-              presortedMedian(values)?.toFixed(0) ?? '---',
+              this.localizer.text("vitalsHeartRateTableRowTitle"),
+              presortedMedian(values)?.toFixed(0) ?? "---",
               upperMedian && lowerMedian ?
                 `${lowerMedian.toFixed(0)}-${upperMedian.toFixed(0)}`
-              : '---',
-              percentage(values, (value) => value < 50)?.toFixed(0) ?? '---',
-              percentage(values, (value) => value > 120)?.toFixed(0) ?? '---',
+              : "---",
+              percentage(values, (value) => value < 50)?.toFixed(0) ?? "---",
+              percentage(values, (value) => value > 120)?.toFixed(0) ?? "---",
             ].map((title) => this.cell(title)),
           ],
           columnWidth,
-        )
+        );
       },
-    )
-    this.moveDown(this.textStyles.body.fontSize * 2)
+    );
+    this.moveDown(this.textStyles.body.fontSize * 2);
   }
 
   private addBloodPressureVitalsPart() {
-    const hasSystolic = this.data.vitals.systolicBloodPressure.length > 0
-    const hasDiastolic = this.data.vitals.diastolicBloodPressure.length > 0
-    if (!hasSystolic && !hasDiastolic) return
+    const hasSystolic = this.data.vitals.systolicBloodPressure.length > 0;
+    const hasDiastolic = this.data.vitals.diastolicBloodPressure.length > 0;
+    if (!hasSystolic && !hasDiastolic) return;
     this.splitTwoColumns(
       (columnWidth) => {
-        if (!hasSystolic) return
+        if (!hasSystolic) return;
         this.addText(
-          this.texts.vitalsSection.systolicBloodPressureTitle,
+          this.localizer.text("vitalsSystolicBloodPressureTitle"),
           this.textStyles.bodyBold,
           columnWidth,
-        )
-        this.addChart(this.data.vitals.systolicBloodPressure, columnWidth)
+        );
+        this.addChart(this.data.vitals.systolicBloodPressure, columnWidth);
       },
       (columnWidth) => {
-        if (!hasDiastolic) return
+        if (!hasDiastolic) return;
         this.addText(
-          this.texts.vitalsSection.diastolicBloodPressureTitle,
+          this.localizer.text("vitalsDiastolicBloodPressureTitle"),
           this.textStyles.bodyBold,
           columnWidth,
-        )
-        this.addChart(this.data.vitals.diastolicBloodPressure, columnWidth)
+        );
+        this.addChart(this.data.vitals.diastolicBloodPressure, columnWidth);
       },
-    )
+    );
 
     const systolicValues = [
       ...this.data.vitals.systolicBloodPressure.map(
         (observation) => observation.value,
       ),
-    ].sort((a, b) => a - b)
-    const systolicUpperMedian = presortedPercentile(systolicValues, 0.75)
-    const systolicLowerMedian = presortedPercentile(systolicValues, 0.25)
+    ].sort((a, b) => a - b);
+    const systolicUpperMedian = presortedPercentile(systolicValues, 0.75);
+    const systolicLowerMedian = presortedPercentile(systolicValues, 0.25);
 
     const diastolicValues = [
       ...this.data.vitals.diastolicBloodPressure.map(
         (observation) => observation.value,
       ),
-    ].sort((a, b) => a - b)
-    const diastolicUpperMedian = presortedPercentile(diastolicValues, 0.75)
-    const diastolicLowerMedian = presortedPercentile(diastolicValues, 0.25)
+    ].sort((a, b) => a - b);
+    const diastolicUpperMedian = presortedPercentile(diastolicValues, 0.75);
+    const diastolicLowerMedian = presortedPercentile(diastolicValues, 0.25);
 
     this.addTable([
       [
-        this.texts.vitalsSection.bloodPressureTable.titleHeader,
-        this.texts.vitalsSection.bloodPressureTable.medianHeader,
-        this.texts.vitalsSection.bloodPressureTable.iqrHeader,
-        this.texts.vitalsSection.bloodPressureTable.percentageUnder90Header,
-        this.texts.vitalsSection.bloodPressureTable.percentageOver180Header,
+        "",
+        this.localizer.text("vitalsBloodPressureTableMedianHeader"),
+        this.localizer.text("vitalsBloodPressureTableIqrHeader"),
+        this.localizer.text("vitalsBloodPressureTablePercentageUnder90Header"),
+        this.localizer.text("vitalsBloodPressureTablePercentageOver180Header"),
       ].map((title) => this.cell(title)),
       (hasSystolic ?
         [
-          this.texts.vitalsSection.bloodPressureTable.systolicRowTitle,
-          presortedMedian(systolicValues)?.toFixed(0) ?? '---',
+          this.localizer.text("vitalsBloodPressureTableSystolicRowTitle"),
+          presortedMedian(systolicValues)?.toFixed(0) ?? "---",
           systolicUpperMedian && systolicLowerMedian ?
             `${systolicLowerMedian.toFixed(0)}-${systolicUpperMedian.toFixed(0)}`
-          : '---',
+          : "---",
           percentage(systolicValues, (value) => value < 90)?.toFixed(0) ??
-            '---',
+            "---",
           percentage(systolicValues, (value) => value > 180)?.toFixed(0) ??
-            '---',
+            "---",
         ]
-      : ['', '', '', '', '']
+      : ["", "", "", "", ""]
       ).map((title) => this.cell(title)),
       (hasDiastolic ?
         [
-          this.texts.vitalsSection.bloodPressureTable.diastolicRowTitle,
-          presortedMedian(diastolicValues)?.toFixed(0) ?? '---',
+          this.localizer.text("vitalsBloodPressureTableDiastolicRowTitle"),
+          presortedMedian(diastolicValues)?.toFixed(0) ?? "---",
           diastolicUpperMedian && diastolicLowerMedian ?
             `${diastolicLowerMedian.toFixed(0)}-${diastolicUpperMedian.toFixed(0)}`
-          : '---',
-          '-',
-          '-',
+          : "---",
+          "-",
+          "-",
         ]
-      : ['', '', '', '', '']
+      : ["", "", "", "", ""]
       ).map((title) => this.cell(title)),
-    ])
-    this.moveDown(this.textStyles.body.fontSize)
+    ]);
+    this.moveDown(this.textStyles.body.fontSize);
   }
 
-  // Helpers
+  // Helpers - PDF Generation
 
   private addChart(data: Observation[], maxWidth?: number, baseline?: number) {
     const width =
-      maxWidth ?? this.pageWidth - this.cursor.x - this.margins.right
-    const height = width * (9 / 16)
+      maxWidth ?? this.pageWidth - this.cursor.x - this.margins.right;
+    const height = width * (9 / 16);
     const svg = generateChartSvg(
       data,
       { width: width, height: height },
       { top: 10, right: 1, bottom: 40, left: 24 },
       baseline,
-    )
-    this.addSvg(svg, width)
+    );
+    this.addSvg(svg, width);
   }
 
   private addSpeedometer(maxWidth?: number) {
     const width =
-      maxWidth ?? this.pageWidth - this.cursor.x - this.margins.right
+      maxWidth ?? this.pageWidth - this.cursor.x - this.margins.right;
     const svg = generateSpeedometerSvg(this.data.symptomScores, width, {
-      languages: this.options.languages,
-    })
-    this.addSvg(svg, width)
+      localizer: this.localizer,
+    });
+    this.addSvg(svg, width);
+  }
+
+  // Helpers - Localization
+
+  private medicationDoseScheduleText(input: {
+    schedule: {
+      quantity: number[];
+      frequency: number;
+    };
+    unit: string;
+  }): string {
+    const prefix =
+      input.schedule.quantity.map((quantity) => quantity.toString()).join("/") +
+      " " +
+      input.unit +
+      " ";
+    switch (input.schedule.frequency) {
+      case 1:
+        return this.localizer.text(
+          "currentMedicationsTableDoseScheduleOnceDaily",
+          prefix,
+        );
+      case 2:
+        return this.localizer.text(
+          "currentMedicationsTableDoseScheduleTwiceDaily",
+          prefix,
+        );
+      default:
+        return this.localizer.text(
+          "currentMedicationsTableDoseScheduleMultipleTimesDaily",
+          prefix,
+          input.schedule.frequency.toString(),
+        );
+    }
+  }
+
+  private symptomScorePersonalSummaryText(): string | null {
+    const currentScore = this.data.latestSymptomScore?.overallScore;
+    const previousScore = this.data.secondLatestSymptomScore?.overallScore;
+    if (currentScore === undefined || previousScore === undefined) return null;
+    const currentScoreText = currentScore.toFixed(0) + "%";
+    const previousScoreText = previousScore.toFixed(0) + "%";
+    const improvement = currentScore - previousScore;
+
+    if (currentScore >= 90) {
+      if (improvement >= 10) {
+        return this.localizer.text(
+          "symptomScoresSummaryGoodImproving",
+          previousScoreText,
+          currentScoreText,
+        );
+      } else {
+        return this.localizer.text("symptomScoresSummaryGoodStable");
+      }
+    } else {
+      if (improvement >= 10) {
+        return this.localizer.text(
+          "symptomScoresSummaryFairImproving",
+          previousScoreText,
+          currentScoreText,
+        );
+      } else if (improvement > -10) {
+        return this.localizer.text("symptomScoresSummaryFairStable");
+      } else {
+        return this.localizer.text(
+          "symptomScoresSummaryFairWorsening",
+          previousScoreText,
+          currentScoreText,
+        );
+      }
+    }
+  }
+
+  private formatDate(date: Date): string {
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  }
+
+  private formatTime(date: Date): string {
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 }

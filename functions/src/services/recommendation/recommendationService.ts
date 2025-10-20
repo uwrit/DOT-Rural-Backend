@@ -16,43 +16,44 @@ import {
   UserMedicationRecommendation,
   type UserMedicationRecommendationDoseSchedule,
   UserMedicationRecommendationType,
-} from '@stanfordbdhg/engagehf-models'
-import { BetaBlockerRecommender } from './recommenders/betaBlockerRecommender.js'
-import { DiureticRecommender } from './recommenders/diureticRecommender.js'
-import { MraRecommender } from './recommenders/mraRecommender.js'
-import { RasiRecommender } from './recommenders/rasiRecommender.js'
-import { type Recommender } from './recommenders/recommender.js'
-import { Sglt2iRecommender } from './recommenders/sglt2iRecommender.js'
-import { type MedicationRequestContext } from '../../models/medicationRequestContext.js'
-import { type ContraindicationService } from '../contraindication/contraindicationService.js'
-import { type MedicationService } from '../medication/medicationService.js'
+} from "@stanfordbdhg/engagehf-models";
+import { recommendationLocalization } from "./recommendationService+localization.js";
+import { BetaBlockerRecommender } from "./recommenders/betaBlockerRecommender.js";
+import { DiureticRecommender } from "./recommenders/diureticRecommender.js";
+import { MraRecommender } from "./recommenders/mraRecommender.js";
+import { RasiRecommender } from "./recommenders/rasiRecommender.js";
+import { type Recommender } from "./recommenders/recommender.js";
+import { Sglt2iRecommender } from "./recommenders/sglt2iRecommender.js";
+import { type MedicationRequestContext } from "../../models/medicationRequestContext.js";
+import { type ContraindicationService } from "../contraindication/contraindicationService.js";
+import { type MedicationService } from "../medication/medicationService.js";
 
 export interface RecommendationInput {
-  requests: MedicationRequestContext[]
-  contraindications: FHIRAllergyIntolerance[]
-  vitals: RecommendationVitals
-  latestDizzinessScore?: number
+  requests: MedicationRequestContext[];
+  contraindications: FHIRAllergyIntolerance[];
+  vitals: RecommendationVitals;
+  latestDizzinessScore?: number;
 }
 
 export interface RecommendationVitals {
-  systolicBloodPressure: Observation[]
-  heartRate: Observation[]
-  creatinine?: Observation
-  estimatedGlomerularFiltrationRate?: Observation
-  potassium?: Observation
+  systolicBloodPressure: Observation[];
+  heartRate: Observation[];
+  creatinine?: Observation;
+  estimatedGlomerularFiltrationRate?: Observation;
+  potassium?: Observation;
 }
 
 export interface RecommendationOutput {
-  currentMedication: MedicationRequestContext[]
-  recommendedMedication?: MedicationReference
-  type: UserMedicationRecommendationType
+  currentMedication: MedicationRequestContext[];
+  recommendedMedication?: MedicationReference;
+  type: UserMedicationRecommendationType;
 }
 
 export class RecommendationService {
   // Properties
 
-  private readonly medicationService: MedicationService
-  private readonly recommenders: Recommender[]
+  private readonly medicationService: MedicationService;
+  private readonly recommenders: Recommender[];
 
   // Constructor
 
@@ -60,14 +61,14 @@ export class RecommendationService {
     contraindicationService: ContraindicationService,
     medicationService: MedicationService,
   ) {
-    this.medicationService = medicationService
+    this.medicationService = medicationService;
     this.recommenders = [
       new BetaBlockerRecommender(contraindicationService),
       new RasiRecommender(contraindicationService),
       new MraRecommender(contraindicationService),
       new Sglt2iRecommender(contraindicationService),
       new DiureticRecommender(contraindicationService),
-    ]
+    ];
   }
 
   // Methods
@@ -75,14 +76,14 @@ export class RecommendationService {
   async compute(
     input: RecommendationInput,
   ): Promise<UserMedicationRecommendation[]> {
-    const result: UserMedicationRecommendation[] = []
+    const result: UserMedicationRecommendation[] = [];
     for (const recommender of this.recommenders) {
-      const outputs = recommender.compute(input)
+      const outputs = recommender.compute(input);
       for (const output of outputs) {
-        result.push(await this.createRecommendation(output))
+        result.push(await this.createRecommendation(output));
       }
     }
-    return result
+    return result;
   }
 
   // Helpers
@@ -95,41 +96,41 @@ export class RecommendationService {
         await this.medicationService.getReference({
           reference: output.recommendedMedication,
         })
-      : null
+      : null;
 
     const medication =
       output.currentMedication.at(0)?.medication ??
-      recommendedMedication?.content
-    let title = medication?.displayName ?? ''
+      recommendedMedication?.content;
+    let title = medication?.displayName ?? "";
 
-    const brandNames = medication?.brandNames ?? []
-    if (brandNames.length > 0) title += ` (${brandNames.join(', ')})`
+    const brandNames = medication?.brandNames ?? [];
+    if (brandNames.length > 0) title += ` (${brandNames.join(", ")})`;
 
     const currentMedicationClass =
-      output.currentMedication.at(0)?.medicationClass
+      output.currentMedication.at(0)?.medicationClass;
     const currentMedicationClassReference =
-      output.currentMedication.at(0)?.medicationClassReference
+      output.currentMedication.at(0)?.medicationClassReference;
 
     const recommendedMedicationClass = await (async () => {
-      const recommendedMedicationContent = recommendedMedication?.content
+      const recommendedMedicationContent = recommendedMedication?.content;
       const reference =
         recommendedMedicationContent ?
           recommendedMedicationContent.medicationClassReference
-        : null
+        : null;
       if (
         currentMedicationClass &&
         currentMedicationClassReference &&
         reference &&
         currentMedicationClassReference.reference === reference.reference
       ) {
-        return currentMedicationClass
+        return currentMedicationClass;
       }
       return reference ?
           (await this.medicationService.getClassReference(reference))?.content
-        : null
-    })()
+        : null;
+    })();
 
-    const minimumDailyDoseRequest = medication?.minimumDailyDoseRequest
+    const minimumDailyDoseRequest = medication?.minimumDailyDoseRequest;
     const minimumDailyDoseDrugReference =
       minimumDailyDoseRequest?.medicationReference ?
         (
@@ -137,20 +138,20 @@ export class RecommendationService {
             minimumDailyDoseRequest.medicationReference,
           )
         )?.content
-      : null
+      : null;
     const minimumDailyDoseSchedule =
       minimumDailyDoseRequest && minimumDailyDoseDrugReference ?
         this.doseSchedule(
           minimumDailyDoseRequest,
           minimumDailyDoseDrugReference,
         )
-      : []
+      : [];
 
     const currentDailyDoseSchedule = output.currentMedication.flatMap(
       (context) => this.doseSchedule(context.request, context.drug),
-    )
+    );
 
-    const targetDailyDoseRequest = medication?.targetDailyDoseRequest
+    const targetDailyDoseRequest = medication?.targetDailyDoseRequest;
     const targetDailyDoseDrugReference =
       targetDailyDoseRequest?.medicationReference ?
         (
@@ -158,11 +159,11 @@ export class RecommendationService {
             targetDailyDoseRequest.medicationReference,
           )
         )?.content
-      : undefined
+      : undefined;
     const targetDailyDoseSchedule =
       targetDailyDoseRequest && targetDailyDoseDrugReference ?
         this.doseSchedule(targetDailyDoseRequest, targetDailyDoseDrugReference)
-      : []
+      : [];
 
     return new UserMedicationRecommendation({
       currentMedication: output.currentMedication.map(
@@ -176,11 +177,11 @@ export class RecommendationService {
           }
         : undefined,
       displayInformation: {
-        title: new LocalizedText(title),
+        title: LocalizedText.raw(title),
         subtitle:
           currentMedicationClass?.name ??
           recommendedMedicationClass?.name ??
-          new LocalizedText(''),
+          LocalizedText.raw(""),
         description: this.recommendationDescription(
           output,
           recommendedMedication?.content ?? undefined,
@@ -193,10 +194,10 @@ export class RecommendationService {
           minimumSchedule: minimumDailyDoseSchedule,
           currentSchedule: currentDailyDoseSchedule,
           targetSchedule: targetDailyDoseSchedule,
-          unit: 'mg',
+          unit: "mg",
         },
       },
-    })
+    });
   }
 
   private doseSchedule(
@@ -205,18 +206,18 @@ export class RecommendationService {
   ): UserMedicationRecommendationDoseSchedule[] {
     const ingredients = (drug.ingredient ?? []).map(
       (ingredient) => ingredient.strength?.numerator?.value ?? 0,
-    )
+    );
     return (request.dosageInstruction ?? []).map((instruction) => {
-      const frequency = instruction.timing?.repeat?.frequency ?? 1
+      const frequency = instruction.timing?.repeat?.frequency ?? 1;
       const count = (instruction.doseAndRate ?? []).reduce(
         (previous, current) => previous + (current.doseQuantity?.value ?? 0),
         0,
-      )
+      );
       return {
         frequency: frequency,
         quantity: ingredients.map((ingredient) => ingredient * count),
-      }
-    })
+      };
+    });
   }
 
   private recommendationDescription(
@@ -225,42 +226,45 @@ export class RecommendationService {
   ): LocalizedText {
     switch (output.type) {
       case UserMedicationRecommendationType.improvementAvailable: {
-        if (recommendedMedication !== undefined) {
-          const displayName = recommendedMedication.displayName
-          return new LocalizedText(
-            `Discuss starting ${displayName} (more effective med) with your care team to help your heart.`,
-          )
+        const recommendedMedicationName = recommendedMedication?.displayName;
+        if (recommendedMedicationName !== undefined) {
+          return LocalizedText.create(
+            recommendationLocalization.improvementAvailableMoreEffectiveMed,
+            recommendedMedicationName,
+          );
         } else {
-          return new LocalizedText(
-            'Discuss increasing the dose with your care team to get closer to target.',
-          )
+          return LocalizedText.create(
+            recommendationLocalization.improvementAvailableIncreasing,
+          );
         }
       }
       case UserMedicationRecommendationType.moreLabObservationsRequired: {
-        return new LocalizedText(
-          'Discuss lab check with your care team before med change.',
-        )
+        return LocalizedText.create(
+          recommendationLocalization.moreLabObservationsRequired,
+        );
       }
       case UserMedicationRecommendationType.morePatientObservationsRequired: {
-        return new LocalizedText(
-          'Need more blood pressure / heart rate checks to suggest a change.',
-        )
+        return LocalizedText.create(
+          recommendationLocalization.morePatientObservationsRequired,
+        );
       }
       case UserMedicationRecommendationType.noActionRequired: {
-        return new LocalizedText('')
+        return LocalizedText.create(
+          recommendationLocalization.noActionRequired,
+        );
       }
       case UserMedicationRecommendationType.notStarted: {
-        return new LocalizedText(
-          'Discuss starting this med with your care team to help your heart.',
-        )
+        return LocalizedText.create(recommendationLocalization.notStarted);
       }
       case UserMedicationRecommendationType.personalTargetDoseReached: {
-        return new LocalizedText(
-          'Your current target dose was reached. Congrats!',
-        )
+        return LocalizedText.create(
+          recommendationLocalization.personalTargetDoseReached,
+        );
       }
       case UserMedicationRecommendationType.targetDoseReached: {
-        return new LocalizedText(`You're on the target dose. Congrats!`)
+        return LocalizedText.create(
+          recommendationLocalization.targetDoseReached,
+        );
       }
     }
   }

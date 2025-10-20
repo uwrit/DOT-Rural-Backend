@@ -6,35 +6,35 @@
 // SPDX-License-Identifier: MIT
 //
 
-import { z } from 'zod'
-import { updateStaticDataInputSchema } from './updateStaticData.js'
-import { dateConverter } from '../helpers/dateConverter.js'
-import { optionalish, optionalishDefault } from '../helpers/optionalish.js'
+import { z } from "zod";
+import { updateStaticDataInputSchema } from "./updateStaticData.js";
+import { dateTimeConverter } from "../helpers/dateConverter.js";
+import { optionalish, optionalishDefault } from "../helpers/optionalish.js";
 
 export enum DebugDataComponent {
-  invitations = 'invitations',
-  users = 'users',
+  invitations = "invitations",
+  users = "users",
 }
 
 export enum UserDebugDataComponent {
-  consent = 'consent',
-  appointments = 'appointments',
-  medicationRecommendations = 'medicationRecommendations',
-  medicationRequests = 'medicationRequests',
-  messages = 'messages',
-  bodyWeightObservations = 'bodyWeightObservations',
-  bloodPressureObservations = 'bloodPressureObservations',
-  dryWeightObservations = 'dryWeightObservations',
-  heartRateObservations = 'heartRateObservations',
-  creatinineObservations = 'creatinineObservations',
-  eGfrObservations = 'eGfrObservations',
-  potassiumObservations = 'potassiumObservations',
-  questionnaireResponses = 'questionnaireResponses',
-  symptomScores = 'symptomScores',
+  consent = "consent",
+  appointments = "appointments",
+  medicationRecommendations = "medicationRecommendations",
+  medicationRequests = "medicationRequests",
+  messages = "messages",
+  bodyWeightObservations = "bodyWeightObservations",
+  bloodPressureObservations = "bloodPressureObservations",
+  dryWeightObservations = "dryWeightObservations",
+  heartRateObservations = "heartRateObservations",
+  creatinineObservations = "creatinineObservations",
+  eGfrObservations = "eGfrObservations",
+  potassiumObservations = "potassiumObservations",
+  questionnaireResponses = "questionnaireResponses",
+  symptomScores = "symptomScores",
 }
 
 export const defaultSeedInputSchema = z.object({
-  date: dateConverter.schema.default(new Date().toISOString()),
+  date: dateTimeConverter.schema.default(new Date().toISOString()),
   only: optionalishDefault(
     z.nativeEnum(DebugDataComponent).array(),
     Object.values(DebugDataComponent),
@@ -56,7 +56,7 @@ export const defaultSeedInputSchema = z.object({
       .array(),
     [],
   ),
-})
+});
 
-export type DefaultSeedInput = z.input<typeof defaultSeedInputSchema>
-export type DefaultSeedOutput = Record<string, never>
+export type DefaultSeedInput = z.input<typeof defaultSeedInputSchema>;
+export type DefaultSeedOutput = Record<string, never>;
