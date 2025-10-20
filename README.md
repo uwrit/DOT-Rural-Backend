@@ -520,10 +520,10 @@ Based on [FHIR Observation](https://hl7.org/fhir/R4B/observation.html), the foll
 |id|string|-|[Resource](https://hl7.org/fhir/R4B/resource.html): Logical id of this artifact|
 |status|[ObservationStatus](https://hl7.org/fhir/R4B/valueset-observation-status.html)|e.g. "final"|This value is most likely "final" in every case.|
 |code|[Code](https://hl7.org/fhir/R4B/valueset-observation-codes.html)|e.g. `{"system":"http://loinc.org","code":"55423-8","display":"Number of steps"}`|Use one of the codes mentioned below.|
-|value|optional [Quantity](https://hl7.org/fhir/R4B/datatypes.html#Quantity)|e.g. `{"code":"mm[Hg]","system":"http://unitsofmeasure.org","unit":"mmHg","value":120}`|Use one of the units listed below.|
+|value|optional [Quantity](https://hl7.org/fhir/R4B/datatypes.html#Quantity)|e.g. `{"code":"mm[Hg]","system":"","unit":"mmHg","value":120}`|Use one of the units listed below.|
 |component|list of components|-|Instead of containing a single `value` property, some observations are composed of multiple components (e.g. a blood pressure observation contains a diastolic and systolic component).|
 |component[x]>code|[Code](https://hl7.org/fhir/R4B/valueset-observation-codes.html)|e.g. `{"system":"http://loinc.org","code":"55423-8","display":"Number of steps"}`|Use one of the codes mentioned below.|
-|component[x]>value|optional [Quantity](https://hl7.org/fhir/R4B/datatypes.html#Quantity)|e.g. `{"code":"mm[Hg]","system":"http://unitsofmeasure.org","unit":"mmHg","value":120}`|Use one of the units listed below.|
+|component[x]>value|optional [Quantity](https://hl7.org/fhir/R4B/datatypes.html#Quantity)|e.g. `{"code":"mm[Hg]","system":"","unit":"mmHg","value":120}`|Use one of the units listed below.|
 |effective|[Period](https://hl7.org/fhir/R4B/datatypes.html#period) with Date objects or Date|-|Use Date for instant observation and periods for longer observations (e.g. more than 1 minute).|
 
 #### users/$userId$/bloodPressureObservations/$observationId$
@@ -538,8 +538,8 @@ Further, blood pressure observations have two components.
 
 |code>system|code>code|code>display|value>system|value>value|value>code|value>unit|
 |-|-|-|-|-|-|-|
-|"http://loinc.org"|"8462-4"|"Diastolic blood pressure"|"http://unitsofmeasure.org"|double|"mm[Hg]"|"mmHg"|
-|"http://loinc.org"|"8480-6"|"Systolic blood pressure"|"http://unitsofmeasure.org"|double|"mm[Hg]"|"mmHg"|
+|"http://loinc.org"|"8462-4"|"Diastolic blood pressure"|""|double|"mm[Hg]"|"mmHg"|
+|"http://loinc.org"|"8480-6"|"Systolic blood pressure"|""|double|"mm[Hg]"|"mmHg"|
 
 #### users/$userId$/bodyWeightObservations/$observationId$
 
@@ -547,7 +547,7 @@ Body weight observations contain the following code and value.
 
 |code>system|code>code|code>display|value>system|value>value|value>code|value>unit|
 |-|-|-|-|-|-|-|
-|"http://loinc.org"|"29463-7"|"Body weight"|double|"http://unitsofmeasure.org"|"kg" or "[lb_av]"|"kg" or "lbs"|
+|"http://loinc.org"|"29463-7"|"Body weight"|double|""|"kg" or "[lb_av]"|"kg" or "lbs"|
 
 #### users/$userId$/creatinineObservations/$observationId$
 
@@ -555,7 +555,7 @@ Creatinine observations contain the following code and value.
 
 |code>system|code>code|code>display|value>system|value>value|value>code|value>unit|
 |-|-|-|-|-|-|-|
-|"http://loinc.org"|"2160-0"|"Creatinine [Mass/volume] in Serum or Plasma"|double|"http://unitsofmeasure.org"|"mg/dL"|"mg/dL"|
+|"http://loinc.org"|"2160-0"|"Creatinine [Mass/volume] in Serum or Plasma"|double|""|"mg/dL"|"mg/dL"|
 
 #### users/$userId$/dryBodyWeightObservations/$observationId$
 
@@ -563,7 +563,7 @@ Dry body weight observations contain the following code and value.
 
 |code>system|code>code|code>display|value>system|value>value|value>code|value>unit|
 |-|-|-|-|-|-|-|
-|"http://loinc.org"|"29463-7"|"Body weight"|double|"http://unitsofmeasure.org"|"kg"|"kg"|
+|"http://loinc.org"|"29463-7"|"Body weight"|double|""|"kg"|"kg"|
 
 #### users/$userId$/eGfrObservations/$observationId$
 
@@ -571,7 +571,7 @@ Dry body weight observations contain the following code and value.
 
 |code>system|code>code|code>display|value>system|value>value|value>code|value>unit|
 |-|-|-|-|-|-|-|
-|"http://loinc.org"|"98979-8"|"Glomerular filtration rate/1.73 sq M.predicted [Volume Rate/Area] in Serum, Plasma or Blood by Creatinine-based formula (CKD-EPI 2021)"|double|"http://unitsofmeasure.org"|"mL/min/{1.73_m2}"|"mL/min/1.73_m2"|
+|"http://loinc.org"|"98979-8"|"Glomerular filtration rate/1.73 sq M.predicted [Volume Rate/Area] in Serum, Plasma or Blood by Creatinine-based formula (CKD-EPI 2021)"|double|""|"mL/min/{1.73_m2}"|"mL/min/1.73_m2"|
 
 #### users/$userId$/heartRateObservations/$observationId$
 
@@ -579,7 +579,7 @@ Heart rate observations contain the following code and value.
 
 |code>system|code>code|code>display|value>system|value>value|value>code|value>unit|
 |-|-|-|-|-|-|-|
-|"http://loinc.org"|"8867-4"|"Heart rate"|double|"http://unitsofmeasure.org"|"/min"|"beats/minute"|
+|"http://loinc.org"|"8867-4"|"Heart rate"|double|""|"/min"|"beats/minute"|
 
 #### users/$userId$/potassiumObservations/$observationId$
 
@@ -587,7 +587,7 @@ Potassium observations contain the following code and value.
 
 |code>system|code>code|code>display|value>system|value>value|value>code|value>unit|
 |-|-|-|-|-|-|-|
-|"http://loinc.org"|"6298-4"|"Potassium [Moles/volume] in Blood"|double|"http://unitsofmeasure.org"|"meq/L"|"mEq/L"|
+|"http://loinc.org"|"6298-4"|"Potassium [Moles/volume] in Blood"|double|""|"meq/L"|"mEq/L"|
 
 #### users/$userId$/messages/$messageId$
 
