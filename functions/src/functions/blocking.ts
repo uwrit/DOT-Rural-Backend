@@ -37,7 +37,9 @@ export const beforeUserCreatedFunction = beforeUserCreated(
     const userService = factory.user();
     const credential = event.credential;
 
-    logger.info(`${userId}: About to check existence of credential.`);
+    logger.info(
+      `${userId}: About to check existence of credential ${JSON.stringify(credential)}.`,
+    );
 
     // Escape hatch for users using invitation code to enroll
     if (!credential) {
@@ -48,7 +50,7 @@ export const beforeUserCreatedFunction = beforeUserCreated(
     }
 
     logger.info(
-      `${userId}: About to check email address: ${event.data.email}.`,
+      `${userId}: About to check email address: ${JSON.stringify(event.data)}.`,
     );
 
     if (event.data.email === undefined) {
