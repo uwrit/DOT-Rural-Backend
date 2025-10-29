@@ -12,6 +12,7 @@ import {
   beforeUserCreated,
   beforeUserSignedIn,
 } from "firebase-functions/v2/identity";
+import { z } from "zod";
 import { privilegedServiceAccount } from "./helpers.js";
 import { Env } from "../env.js";
 import { Flags } from "../flags.js";
@@ -37,9 +38,7 @@ export const beforeUserCreatedFunction = beforeUserCreated(
     const userService = factory.user();
     const credential = event.credential;
 
-    logger.info(
-      `${userId}: About to check existence of credential ${JSON.stringify(credential)}.`,
-    );
+    logger.info(`${userId}: About to check existence of credential.`);
 
     // Escape hatch for users using invitation code to enroll
     if (!credential) {
@@ -49,12 +48,31 @@ export const beforeUserCreatedFunction = beforeUserCreated(
       return { customClaims: {} };
     }
 
-    logger.info(
-      `${userId}: About to check email address: ${JSON.stringify(event.data)}.`,
-    );
+    let emailAddress: string | undefined = undefined;
+    try {
+      const credentialClaims = event.credential?.claims ?? {};
+      emailAddress = z
+        .string()
+        .optional()
+        .parse(
+          event.data.email ??
+            credentialClaims["upn"] ??
+            credentialClaims["unique_name"],
+        );
+    } catch (error: unknown) {
+      logger.error(
+        `${userId}: Email address validation failed ${String(error)}.`,
+      );
+      throw new https.HttpsError(
+        "invalid-argument",
+        "Email address validation failed.",
+      );
+    }
 
-    if (event.data.email === undefined) {
-      logger.error(`Email address not set.`);
+    logger.info(`${userId}: About to check email address: ${emailAddress}.`);
+
+    if (emailAddress === undefined) {
+      logger.error(`${userId}: Email address not set.`);
       throw new https.HttpsError(
         "invalid-argument",
         "Email address is required for user.",
@@ -79,14 +97,12 @@ export const beforeUserCreatedFunction = beforeUserCreated(
       );
     }
 
-    logger.info(
-      `${userId}: About to get invitation by code: ${event.data.email}.`,
-    );
+    logger.info(`${userId}: About to get invitation by code: ${emailAddress}.`);
 
-    const invitation = await userService.getInvitationByCode(event.data.email);
+    const invitation = await userService.getInvitationByCode(emailAddress);
     if (invitation?.content === undefined) {
       logger.error(
-        `${userId}: No valid invitation code found for user with email ${event.data.email}.`,
+        `${userId}: No valid invitation code found for user with email ${emailAddress}.`,
       );
       throw new https.HttpsError(
         "not-found",
