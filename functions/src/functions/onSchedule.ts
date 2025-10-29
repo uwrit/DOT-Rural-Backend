@@ -13,7 +13,7 @@ import { getServiceFactory } from "../services/factory/getServiceFactory.js";
 
 export const onScheduleEveryMorning = onSchedule(
   {
-    schedule: "*/5 * * * *",
+    schedule: "0 8 * * *",
     timeZone: "America/Los_Angeles",
     serviceAccount: privilegedServiceAccount,
     secrets: Env.twilioSecretKeys,
