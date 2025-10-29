@@ -63,41 +63,41 @@ export class TriggerService {
         patients,
         messageService,
         now,
-      }).catch((error) =>
+      }).catch((error: unknown) => {
         logger.error(
           `everyMorning: Error adding daily reminders: ${String(error)}`,
-        ),
-      ),
+        );
+      }),
       this.addInactivityReminderMessages({
         patients,
         now,
         messageService,
         userService,
-      }).catch((error) =>
+      }).catch((error: unknown) => {
         logger.error(
           `everyMorning: Error adding inactivity reminders: ${String(error)}`,
-        ),
-      ),
-      this.addAppointmentReminderMessages(now).catch((error) =>
+        );
+      }),
+      this.addAppointmentReminderMessages(now).catch((error: unknown) => {
         logger.error(
           `everyMorning: Error adding appointment reminders: ${String(error)}`,
-        ),
-      ),
-      this.completeAppointmentReminderMessages(now).catch((error) =>
+        );
+      }),
+      this.completeAppointmentReminderMessages(now).catch((error: unknown) => {
         logger.error(
           `everyMorning: Error completing appointment reminders: ${String(error)}`,
-        ),
-      ),
-      this.seedStaticDataIfNeeded().catch((error) =>
+        );
+      }),
+      this.seedStaticDataIfNeeded().catch((error: unknown) => {
         logger.error(
           `everyMorning: Error seeding static data: ${String(error)}`,
-        ),
-      ),
-      this.deleteExpiredAccounts().catch((error) =>
+        );
+      }),
+      this.deleteExpiredAccounts().catch((error: unknown) => {
         logger.error(
           `everyMorning: Error deleting expired accounts: ${String(error)}`,
-        ),
-      ),
+        );
+      }),
     ]);
   }
 
