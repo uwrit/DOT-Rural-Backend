@@ -16,6 +16,8 @@ import { Flags } from "../../flags.js";
 import { DefaultContraindicationService } from "../contraindication/defaultContraindicationService.js";
 import { Credential } from "../credential/credential.js";
 import { FirestoreService } from "../database/firestoreService.js";
+import { DefaultExportService } from "../export/defaultExportService.js";
+import { type ExportService } from "../export/exportService.js";
 import { DefaultHealthSummaryService } from "../healthSummary/databaseHealthSummaryService.js";
 import { type HealthSummaryService } from "../healthSummary/healthSummaryService.js";
 import { DatabaseHistoryService } from "../history/databaseHistoryService.js";
@@ -73,6 +75,14 @@ export class DefaultServiceFactory implements ServiceFactory {
   );
 
   private readonly egfrCalculator = new Lazy(() => new EgfrCalculator());
+
+  private readonly exportService = new Lazy(
+    () =>
+      new DefaultExportService(
+        this.databaseService.value,
+        this.userService.value,
+      ),
+  );
 
   private readonly healthSummaryService = new Lazy(
     () =>
@@ -198,6 +208,10 @@ export class DefaultServiceFactory implements ServiceFactory {
   }
 
   // Methods - Patient
+
+  export(): ExportService {
+    return this.exportService.value;
+  }
 
   healthSummary(): HealthSummaryService {
     return this.healthSummaryService.value;
