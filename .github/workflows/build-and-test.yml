@@ -23,7 +23,7 @@ jobs:
     uses: StanfordBDHG/.github/.github/workflows/reuse.yml@v2
   markdownlinkcheck:
     name: Markdown Link Check
-    uses: StanfordBDHG/.github/.github/workflows/markdown-link-check.yml@v2
+    uses: StanfordBDHG/.github/.github/workflows/markdown-link-check.yml@v2.3
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -60,6 +60,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.6.x
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'microsoft'
+          java-version: '21'
       - name: Install Dependencies
         run: npm run install
       - name: Install Firebase CLI
